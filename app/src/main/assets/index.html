@@ -80,6 +80,10 @@ footer { padding:8px 12px calc(12px + env(safe-area-inset-bottom)); flex-shrink:
     <span class="serif" style="font-size:24px">Claude</span>
   </div>
   <button class="newbtn" id="navNew">＋ 新建对话</button>
+  <button class="nav" data-soon="对话">◌ 对话</button>
+  <button class="nav" data-soon="项目">▤ 项目</button>
+  <button class="nav" data-soon="Code">&lt;/&gt; Code</button>
+  <button class="nav" data-soon="Artifacts">◇ Artifacts</button>
   <div class="label">最近对话</div>
   <div id="convList"></div>
   <div class="side-foot">
@@ -116,6 +120,17 @@ footer { padding:8px 12px calc(12px + env(safe-area-inset-bottom)); flex-shrink:
     </div>
   </form>
 </footer>
+<div id="login" style="display:none;position:fixed;inset:0;background:var(--bg);z-index:50;flex-direction:column;align-items:center;padding:24px 28px;overflow-y:auto">
+  <div style="display:flex;align-items:center;gap:8px;margin-top:20px"><img src="burst.png" alt="" style="width:26px;height:26px"><span class="serif" style="font-size:24px">Claude</span></div>
+  <div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;width:100%;gap:18px">
+    <img src="burst.png" alt="" style="width:120px;height:120px">
+    <div class="serif" style="font-size:22px">为解决问题的人打造的 AI</div>
+    <input id="loginBase" type="text" placeholder="API 地址（官方留空）" style="width:100%;max-width:360px;padding:14px;border:1px solid var(--line);border-radius:12px;background:var(--card);font-size:15px;margin-top:12px">
+    <input id="loginKey" type="password" placeholder="输入你的 API Key" style="width:100%;max-width:360px;padding:14px;border:1px solid var(--line);border-radius:12px;background:var(--card);font-size:15px">
+    <button id="loginBtn" style="width:100%;max-width:360px;padding:14px;border:none;border-radius:999px;background:#111;color:#fff;font-size:16px">继续</button>
+  </div>
+  <div style="font-size:12px;color:var(--muted);text-align:center;padding:16px 0;line-height:1.6">Key 只保存在本机，不会上传到其他地方。</div>
+</div>
 <div id="dialog">
   <div class="box">
     <strong>设置</strong>
@@ -132,6 +147,7 @@ footer { padding:8px 12px calc(12px + env(safe-area-inset-bottom)); flex-shrink:
     <label style="display:flex;align-items:center;gap:8px;margin:6px 0 10px;color:var(--text);font-size:14px"><input id="thinkToggle" type="checkbox" style="width:auto;margin:0"> 显示思考过程</label>
     <div style="font-size:12px;color:var(--muted)">Key 只保存在本机浏览器中，不会上传到其他地方。</div>
     <div class="row">
+      <button id="logout" style="background:none;color:#B04A3A;margin-right:auto">退出登录</button>
       <button id="clearAll" style="background:#F8E9E5;color:#B04A3A;margin-right:auto">清空所有对话</button>
       <button id="keyCancel" style="background:#eee">取消</button>
       <button id="keySave" style="background:var(--text);color:#fff">保存</button>
@@ -280,6 +296,20 @@ function renderAll() {
   $('empty').classList.toggle('show', c.messages.length === 0);
   scrollDown();
 }
+const nativeCallbacks = {};
+window.onNativeResponse = (id, r) => { const f = nativeCallbacks[id]; delete nativeCallbacks[id]; if (f) f(r); };
+function apiFetch(url, init) {
+  if (!(window.AndroidFS && AndroidFS.requestAsync)) return fetch(url, init);
+  const id = String(Date.now()) + Math.random().toString(36).slice(2);
+  return new Promise((resolve, reject) => {
+    nativeCallbacks[id] = r => {
+      if (!r.status) reject(new Error(r.body));
+      else resolve(new Response(r.body, { status: r.status }));
+    };
+    AndroidFS.requestAsync(id, url, JSON.stringify(init.headers), init.body);
+  });
+}
+
 async function stream(c) {
   const key = localStorage.getItem('anthropic_key');
   if (!key) { openSettings(); return; }
@@ -297,7 +327,7 @@ async function stream(c) {
   let answer = '';
   try {
     const base = localStorage.getItem('api_base') || 'https://api.anthropic.com';
-    const res = await fetch(base + '/v1/messages', {
+    const res = await apiFetch(base + '/v1/messages', {
       method: 'POST',
       headers: {
         'content-type': 'application/json',
@@ -473,6 +503,7 @@ $('menu').onclick = openSide;
 $('mask').onclick = closeSide;
 $('navSettings').onclick = openSettings;
 $('navNew').onclick = () => { if (!busy) { newConv(); closeSide(); } };
+document.querySelectorAll('[data-soon]').forEach(b => b.onclick = () => alert(b.dataset.soon + ' 暂未开放'));
 $('newChat').onclick = () => { if (!busy) newConv(); };
 $('keyCancel').onclick = () => { $('dialog').style.display = 'none'; };
 $('keySave').onclick = () => {
@@ -517,7 +548,21 @@ $('form').onsubmit = e => {
 
 $('model').value = localStorage.getItem('default_model') || 'claude-sonnet-5-5';
 $('model').onchange = () => localStorage.setItem('default_model', $('model').value);
-const GREETINGS = ['今天有什么想法？', '要从哪里开始？', '想聊点什么呢？', '需要我帮你做点什么？', '有什么问题尽管问。', '今天过得怎么样？', '我们从哪个问题开始？', '想写点什么，还是想问点什么？'];
+function showLogin() { $('login').style.display = 'flex'; $('loginKey').value = ''; }
+$('loginBtn').onclick = () => {
+  const k = $('loginKey').value.trim();
+  if (!k) { alert('请填写 API Key'); return; }
+  localStorage.setItem('anthropic_key', k);
+  localStorage.setItem('api_base', $('loginBase').value.trim().replace(/\/+$/, ''));
+  $('login').style.display = 'none';
+};
+$('logout').onclick = () => {
+  localStorage.removeItem('anthropic_key');
+  $('dialog').style.display = 'none';
+  showLogin();
+};
+if (!localStorage.getItem('anthropic_key')) showLogin();
+const GREETINGS =['今天有什么想法？', '要从哪里开始？', '想聊点什么呢？', '需要我帮你做点什么？', '有什么问题尽管问。', '今天过得怎么样？', '我们从哪个问题开始？', '想写点什么，还是想问点什么？'];
 $('greet').textContent = GREETINGS[Math.floor(Math.random() * GREETINGS.length)];
 $('input').addEventListener('input', () => $('send').classList.toggle('on', !!$('input').value.trim()));
 if (!convs.length) newConv(); else { renderAll(); renderSide(); }

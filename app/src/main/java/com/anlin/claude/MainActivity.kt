@@ -11,6 +11,11 @@ import android.webkit.WebView
 import android.webkit.WebViewClient
 import androidx.documentfile.provider.DocumentFile
 import org.json.JSONArray
+import android.content.pm.PackageManager
+import rikka.shizuku.Shizuku
+import org.json.JSONObject
+import java.net.HttpURLConnection
+import java.net.URL
 
 class MainActivity : Activity() {
 
@@ -27,6 +32,9 @@ class MainActivity : Activity() {
         web.webViewClient = WebViewClient()
         web.webChromeClient = WebChromeClient()
         web.addJavascriptInterface(FileBridge(), "AndroidFS")
+        Shizuku.addRequestPermissionResultListener { _, grantResult ->
+            web.evaluateJavascript("window.onShizukuResult && window.onShizukuResult(${grantResult == PackageManager.PERMISSION_GRANTED})", null)
+        }
         web.loadUrl("file:///android_asset/index.html")
     }
 
@@ -51,6 +59,49 @@ class MainActivity : Activity() {
     }
 
     inner class FileBridge {
+
+        /** Shizuku status: running (service connected) and whether this app has been granted access. */
+        @JavascriptInterface
+        fun shizukuStatus(): String {
+            val running = try { Shizuku.pingBinder() } catch (e: Throwable) { false }
+            val granted = running && try {
+                Shizuku.checkSelfPermission() == PackageManager.PERMISSION_GRANTED
+            } catch (e: Throwable) { false }
+            return JSONObject().put("running", running).put("granted", granted).toString()
+        }
+
+        /** Asks the user to allow this app in Shizuku. The result comes back via window.onShizukuResult(granted). */
+        @JavascriptInterface
+        fun requestShizuku() {
+            try { Shizuku.requestPermission(1002) } catch (e: Throwable) { }
+        }
+
+        /** Sends a POST from native code (no browser CORS limits). Returns the full body via window.onNativeResponse. */
+        @JavascriptInterface
+        fun requestAsync(id: String, url: String, headersJson: String, body: String) {
+            Thread {
+                val result = try {
+                    val conn = URL(url).openConnection() as HttpURLConnection
+                    conn.requestMethod = "POST"
+                    conn.doOutput = true
+                    conn.connectTimeout = 30_000
+                    conn.readTimeout = 600_000
+                    val headers = JSONObject(headersJson)
+                    headers.keys().forEach { k -> conn.setRequestProperty(k, headers.getString(k)) }
+                    conn.outputStream.use { it.write(body.toByteArray(Charsets.UTF_8)) }
+                    val code = conn.responseCode
+                    val stream = if (code in 200..299) conn.inputStream else conn.errorStream
+                    val text = stream?.bufferedReader(Charsets.UTF_8)?.use { it.readText() } ?: ""
+                    JSONObject().put("status", code).put("body", text)
+                } catch (e: Exception) {
+                    JSONObject().put("status", 0).put("body", e.toString())
+                }
+                runOnUiThread {
+                    web.evaluateJavascript("window.onNativeResponse(${JSONObject.quote(id)}, $result)", null)
+                }
+            }.start()
+        }
+
 
         @JavascriptInterface
         fun hasFolder(): Boolean = currentFolder()?.canRead() == true
