@@ -27,7 +27,7 @@ class MainActivity : Activity() {
         web.webViewClient = WebViewClient()
         web.webChromeClient = WebChromeClient()
         web.addJavascriptInterface(FileBridge(), "AndroidFS")
-        web.loadUrl(APP_URL)
+        web.loadUrl("file:///android_asset/index.html")
     }
 
     override fun onBackPressed() {
