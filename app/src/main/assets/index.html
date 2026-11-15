@@ -48,6 +48,7 @@ footer { padding:8px 12px calc(12px + env(safe-area-inset-bottom)); flex-shrink:
 #model { background:var(--side); border:none; border-radius:999px; padding:7px 12px; font-size:14px; color:var(--text); outline:none; }
 #send { width:36px; height:36px; border-radius:50%; border:none; background:var(--text); color:#fff; font-size:18px; display:flex; align-items:center; justify-content:center; }
 #send:disabled { opacity:.35; }
+#send.on { background:var(--accent); }
 #side { position:fixed; top:0; bottom:0; left:0; width:80%; max-width:300px; background:var(--side); transform:translateX(-100%); transition:transform .25s; display:flex; flex-direction:column; padding:20px 12px calc(16px + env(safe-area-inset-bottom)); z-index:20; }
 #side.open { transform:none; }
 #mask { position:fixed; inset:0; background:rgba(0,0,0,.2); display:none; z-index:15; }
@@ -91,8 +92,8 @@ footer { padding:8px 12px calc(12px + env(safe-area-inset-bottom)); flex-shrink:
   <button class="icon-btn" id="newChat" aria-label="新对话">✎</button>
 </header>
 <main id="empty">
-  <div style="width:56px;height:56px;overflow:hidden;position:relative"><img src="logo.png" alt="" style="position:absolute;width:782px;left:-152px;top:-165px"></div>
-  <h2 class="serif">今天想聊点什么？</h2>
+  <img src="burst.png" alt="" style="width:72px;height:72px;object-fit:contain">
+  <h2 class="serif" id="greet">今天想聊点什么？</h2>
 </main>
 <div id="log"></div>
 <footer>
@@ -497,6 +498,7 @@ $('form').onsubmit = e => {
   const text = $('input').value.trim();
   if ((!text && !pendingFile) || busy) return;
   $('input').value = '';
+  $('send').classList.remove('on');
   const c = cur();
   let content = text;
   let shown = text;
@@ -515,6 +517,9 @@ $('form').onsubmit = e => {
 
 $('model').value = localStorage.getItem('default_model') || 'claude-sonnet-5-5';
 $('model').onchange = () => localStorage.setItem('default_model', $('model').value);
+const GREETINGS = ['今天有什么想法？', '要从哪里开始？', '想聊点什么呢？', '需要我帮你做点什么？', '有什么问题尽管问。', '今天过得怎么样？', '我们从哪个问题开始？', '想写点什么，还是想问点什么？'];
+$('greet').textContent = GREETINGS[Math.floor(Math.random() * GREETINGS.length)];
+$('input').addEventListener('input', () => $('send').classList.toggle('on', !!$('input').value.trim()));
 if (!convs.length) newConv(); else { renderAll(); renderSide(); }
 if ('serviceWorker' in navigator && location.protocol.startsWith('http')) navigator.serviceWorker.register('sw.js').catch(() => {});
 </script>
