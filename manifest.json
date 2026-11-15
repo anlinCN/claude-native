@@ -1,0 +1,11 @@
+{
+  "name": "Claude Chat",
+  "short_name": "Claude",
+  "start_url": "index.html",
+  "display": "standalone",
+  "background_color": "#F5F1EA",
+  "theme_color": "#F5F1EA",
+  "icons": [
+    { "src": "app-icon.png", "sizes": "460x460", "type": "image/png", "purpose": "any maskable" }
+  ]
+}

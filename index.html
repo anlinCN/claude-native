@@ -1,0 +1,473 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#FAF9F6">
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="app-icon.png" type="image/png">
+<title>Claude</title>
+<style>
+:root { --bg:#F9F9F7; --side:#F2F2EF; --text:#1F1F1E; --muted:#7A7A76; --user:#EFEFEC; --card:#FEFEFE; --accent:#D97757; --line:#E6E6E2; }
+* { box-sizing:border-box; }
+html, body { margin:0; height:100%; background:var(--bg); color:var(--text); font-family:-apple-system,"PingFang SC","Microsoft YaHei",sans-serif; }
+body { display:flex; flex-direction:column; overflow:hidden; }
+.serif { font-family:"Songti SC","SimSun","Noto Serif SC",Georgia,serif; }
+button, select, textarea, input { font:inherit; }
+.icon-btn { background:none; border:none; color:var(--text); width:40px; height:40px; border-radius:10px; font-size:20px; display:flex; align-items:center; justify-content:center; }
+header { display:flex; align-items:center; justify-content:space-between; height:56px; padding:8px 10px; flex-shrink:0; }
+#log { flex:1; overflow-y:auto; padding:8px 18px 16px; display:flex; flex-direction:column; gap:22px; }
+#empty { flex:1; display:none; flex-direction:column; align-items:center; justify-content:center; gap:18px; }
+#empty.show { display:flex; }
+#empty h2 { font-weight:400; font-size:26px; margin:0; }
+.user { align-self:flex-end; max-width:80%; background:var(--user); padding:12px 16px; border-radius:18px; line-height:1.6; white-space:pre-wrap; word-break:break-word; }
+.bot { font-family:-apple-system,"PingFang SC","Microsoft YaHei",sans-serif; font-size:16px; line-height:1.75; white-space:pre-wrap; word-break:break-word; }
+.acts { display:flex; gap:4px; margin-top:10px; font-family:-apple-system,"PingFang SC",sans-serif; }
+.acts button { background:none; border:none; color:var(--muted); width:32px; height:30px; border-radius:8px; font-size:15px; padding:0; }
+.acts button:active { background:var(--side); }
+.acts button.on { color:var(--accent); }
+.think { font-size:14px; color:var(--muted); margin-bottom:10px; }
+.think summary { list-style:none; display:flex; align-items:center; gap:8px; cursor:pointer; }
+.think summary::-webkit-details-marker { display:none; }
+.think .arrow { transition:transform .2s; }
+.think[open] .arrow { transform:rotate(90deg); }
+.think .body { white-space:pre-wrap; border-left:2px solid var(--line); padding-left:12px; margin-top:8px; line-height:1.6; }
+.dots { display:inline-flex; gap:3px; }
+.dots i { width:4px; height:4px; border-radius:50%; background:var(--accent); animation:blink 1.2s infinite; }
+.dots i:nth-child(2) { animation-delay:.2s; }
+.dots i:nth-child(3) { animation-delay:.4s; }
+@keyframes blink { 0%,80%,100% { opacity:.25; } 40% { opacity:1; } }
+.note { font-family:-apple-system,"PingFang SC",sans-serif; font-size:12px; color:var(--muted); margin-top:6px; }
+.err { align-self:center; color:#B04A3A; font-size:14px; }
+#chip { display:none; align-items:center; justify-content:space-between; background:var(--side); border-radius:10px; padding:6px 10px; margin-bottom:8px; font-size:14px; }
+#chip button { background:none; border:none; color:var(--muted); font-size:16px; }
+footer { padding:8px 12px calc(12px + env(safe-area-inset-bottom)); flex-shrink:0; }
+.card { background:var(--card); border:1px solid var(--line); border-radius:28px; padding:14px 14px 10px; box-shadow:0 4px 16px rgba(0,0,0,.06); }
+#input { width:100%; border:none; outline:none; resize:none; background:transparent; font-size:16px; color:var(--text); min-height:24px; max-height:160px; }
+.row { display:flex; align-items:center; justify-content:space-between; margin-top:8px; }
+#model { background:var(--side); border:none; border-radius:999px; padding:7px 12px; font-size:14px; color:var(--text); outline:none; }
+#send { width:36px; height:36px; border-radius:50%; border:none; background:var(--text); color:#fff; font-size:18px; display:flex; align-items:center; justify-content:center; }
+#send:disabled { opacity:.35; }
+#side { position:fixed; top:0; bottom:0; left:0; width:80%; max-width:300px; background:var(--side); transform:translateX(-100%); transition:transform .25s; display:flex; flex-direction:column; padding:20px 12px calc(16px + env(safe-area-inset-bottom)); z-index:20; }
+#side.open { transform:none; }
+#mask { position:fixed; inset:0; background:rgba(0,0,0,.2); display:none; z-index:15; }
+#mask.show { display:block; }
+.side-top { display:flex; align-items:center; gap:8px; margin:6px 8px 14px; }
+.newbtn { background:var(--text); color:#fff; border:none; border-radius:999px; padding:10px 14px; font-size:14px; margin:0 4px 12px; }
+.label { font-size:13px; color:var(--muted); margin:8px 10px 6px; }
+#convList { flex:1; overflow-y:auto; display:flex; flex-direction:column; gap:2px; }
+.conv { display:flex; align-items:center; border-radius:10px; }
+.conv.on, .conv:active { background:#E9E7E0; }
+.conv .t { flex:1; text-align:left; background:none; border:none; padding:10px; font-size:15px; color:var(--text); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.conv .x { background:none; border:none; color:var(--muted); padding:6px 10px; font-size:16px; }
+.side-foot { border-top:1px solid var(--line); padding-top:10px; display:flex; align-items:center; gap:10px; }
+.side-foot .nav { background:none; border:none; padding:10px; border-radius:10px; font-size:15px; flex:1; text-align:left; color:var(--text); }
+.avatar { width:34px; height:34px; border-radius:50%; background:var(--accent); color:#fff; display:flex; align-items:center; justify-content:center; font-size:14px; }
+#dialog { position:fixed; inset:0; background:rgba(0,0,0,.35); display:none; align-items:center; justify-content:center; padding:20px; z-index:30; }
+#dialog .box { background:var(--card); border-radius:16px; padding:20px; width:100%; max-width:360px; }
+#dialog input, #dialog select { width:100%; padding:10px; border:1px solid var(--line); border-radius:8px; margin:8px 0; background:#fff; }
+#dialog label { font-size:13px; color:var(--muted); }
+#dialog .row { justify-content:flex-end; gap:8px; margin-top:12px; }
+#dialog .row button { padding:8px 14px; border-radius:8px; border:none; cursor:pointer; }
+</style>
+</head>
+<body>
+<div id="mask"></div>
+<aside id="side">
+  <div class="side-top">
+    <div style="width:30px;height:30px;overflow:hidden;position:relative"><img src="logo.png" alt="" style="position:absolute;width:403px;left:-78px;top:-85px"></div>
+    <span class="serif" style="font-size:24px">Claude</span>
+  </div>
+  <button class="newbtn" id="navNew">＋ 新建对话</button>
+  <div class="label">最近对话</div>
+  <div id="convList"></div>
+  <div class="side-foot">
+    <div class="avatar">我</div>
+    <button class="nav" id="navSettings">⚙ 设置</button>
+  </div>
+</aside>
+<header>
+  <button class="icon-btn" id="menu" aria-label="菜单">☰</button>
+  <button class="icon-btn" id="newChat" aria-label="新对话">✎</button>
+</header>
+<main id="empty">
+  <div style="width:56px;height:56px;overflow:hidden;position:relative"><img src="logo.png" alt="" style="position:absolute;width:782px;left:-152px;top:-165px"></div>
+  <h2 class="serif">今天想聊点什么？</h2>
+</main>
+<div id="log"></div>
+<footer>
+  <form id="form">
+    <div class="card">
+      <div id="chip"></div>
+      <textarea id="input" rows="1" placeholder="回复 Claude…"></textarea>
+      <div class="row">
+        <div style="display:flex;gap:8px;align-items:center">
+          <button id="attach" type="button" class="icon-btn" aria-label="添加文件">📎</button>
+          <input id="file" type="file" accept=".txt,.md,.py,.js,.ts,.json,.html,.css,.java,.kt,.xml,.csv,.log,.yaml,.yml,.sh,.bat" hidden>
+          <select id="model">
+          <option value="claude-sonnet-5-5">Sonnet 5.5</option>
+          <option value="claude-opus-5-5">Opus 5.5</option>
+          <option value="claude-haiku-5-5">Haiku 5.5</option>
+        </select>
+        </div>
+        <button id="send" type="submit" aria-label="发送">↑</button>
+      </div>
+    </div>
+  </form>
+</footer>
+<div id="dialog">
+  <div class="box">
+    <strong>设置</strong>
+    <label>API 地址（中转站填它的地址，官方留空）</label>
+    <input id="baseInput" type="text" placeholder="https://你的中转站地址">
+    <label>API Key</label>
+    <input id="keyInput" type="password" placeholder="sk-ant-...">
+    <label>默认模型</label>
+    <select id="defModel">
+      <option value="claude-sonnet-5-5">Sonnet 5.5</option>
+      <option value="claude-opus-5-5">Opus 5.5</option>
+      <option value="claude-haiku-5-5">Haiku 5.5</option>
+    </select>
+    <label style="display:flex;align-items:center;gap:8px;margin:6px 0 10px;color:var(--text);font-size:14px"><input id="thinkToggle" type="checkbox" style="width:auto;margin:0"> 显示思考过程</label>
+    <div style="font-size:12px;color:var(--muted)">Key 只保存在本机浏览器中，不会上传到其他地方。</div>
+    <div class="row">
+      <button id="clearAll" style="background:#F8E9E5;color:#B04A3A;margin-right:auto">清空所有对话</button>
+      <button id="keyCancel" style="background:#eee">取消</button>
+      <button id="keySave" style="background:var(--text);color:#fff">保存</button>
+    </div>
+  </div>
+</div>
+<script>
+const $ = id => document.getElementById(id);
+let convs = JSON.parse(localStorage.getItem('conversations') || '[]');
+let curId = localStorage.getItem('cur_id');
+let busy = false;
+
+function newConv() {
+  const c = { id: String(Date.now()), messages: [] };
+  convs.unshift(c);
+  curId = c.id;
+  persist();
+  renderAll(); renderSide();
+  return c;
+}
+function cur() {
+  let c = convs.find(x => x.id === curId);
+  if (!c) { c = convs[0] || newConv(); curId = c.id; }
+  return c;
+}
+function persist() {
+  localStorage.setItem('conversations', JSON.stringify(convs));
+  localStorage.setItem('cur_id', curId);
+}
+function title(c) {
+  const f = c.messages.find(m => m.role === 'user');
+  return f ? f.content.slice(0, 20) : '新对话';
+}
+function scrollDown() { $('log').scrollTop = $('log').scrollHeight; }
+
+function renderSide() {
+  const list = $('convList');
+  list.innerHTML = '';
+  convs.forEach(c => {
+    const row = document.createElement('div');
+    row.className = 'conv' + (c.id === curId ? ' on' : '');
+    const t = document.createElement('button');
+    t.className = 't';
+    t.textContent = title(c);
+    t.onclick = () => { if (busy) return; curId = c.id; persist(); renderAll(); renderSide(); closeSide(); };
+    const x = document.createElement('button');
+    x.className = 'x';
+    x.textContent = '×';
+    x.onclick = () => {
+      if (busy || !confirm('删除这段对话？')) return;
+      convs = convs.filter(y => y.id !== c.id);
+      if (curId === c.id) curId = convs[0] ? convs[0].id : null;
+      if (!convs.length) newConv();
+      persist(); renderAll(); renderSide();
+    };
+    row.append(t, x);
+    list.appendChild(row);
+  });
+}
+
+function userEl(text) {
+  const d = document.createElement('div');
+  d.className = 'user';
+  d.textContent = text;
+  return d;
+}
+
+const svg = p => `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">${p}</svg>`;
+const ICONS = {
+  '⧉': svg('<rect x="8" y="8" width="12" height="12" rx="2"/><path d="M16 8V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h2"/>'),
+  '↗': svg('<path d="M12 15V4"/><path d="M8 8l4-4 4 4"/><path d="M5 13v5a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-5"/>'),
+  '🔊': svg('<path d="M7 5l11 7-11 7z"/>'),
+  '👍': svg('<path d="M7 11v9H4v-9z"/><path d="M7 11l4-7a2 2 0 0 1 3 2l-1 5h5a2 2 0 0 1 2 2.3l-1.2 6A2 2 0 0 1 16.8 21H7"/>'),
+  '👎': svg('<path d="M7 13V4H4v9z"/><path d="M7 13l4 7a2 2 0 0 0 3-2l-1-5h5a2 2 0 0 0 2-2.3l-1.2-6A2 2 0 0 0 16.8 3H7"/>'),
+  '⬇': svg('<path d="M12 4v11"/><path d="M8 11l4 4 4-4"/><path d="M5 20h14"/>'),
+  '↻': svg('<path d="M20 12a8 8 0 1 1-2.3-5.7"/><path d="M20 4v5h-5"/>')
+};
+
+function thinkEl(text, live) {
+  const el = document.createElement('details');
+  el.className = 'think';
+  const sum = document.createElement('summary');
+  const dots = document.createElement('span');
+  dots.className = 'dots';
+  dots.innerHTML = '<i></i><i></i><i></i>';
+  const label = document.createElement('span');
+  label.textContent = '思考过程';
+  const arrow = document.createElement('span');
+  arrow.className = 'arrow';
+  arrow.textContent = '›';
+  sum.append(dots, label, arrow);
+  const body = document.createElement('div');
+  body.className = 'body';
+  body.textContent = text;
+  el.append(sum, body);
+  if (!live) dots.style.display = 'none';
+  return { el, body, done: () => { dots.style.display = 'none'; } };
+}
+
+function botEl(m, isLast) {
+  const d = document.createElement('div');
+  d.className = 'bot';
+  if (m.thinking) d.appendChild(thinkEl(m.thinking, false).el);
+  const body = document.createElement('div');
+  body.textContent = m.content;
+  d.appendChild(body);
+  const acts = document.createElement('div');
+  acts.className = 'acts';
+  const btn = (sym, label, fn, on) => {
+    const b = document.createElement('button');
+    b.innerHTML = ICONS[sym] || sym;
+    b.title = label;
+    b.setAttribute('aria-label', label);
+    if (on) b.className = 'on';
+    b.onclick = fn;
+    acts.appendChild(b);
+  };
+  btn('⧉', '复制', () => navigator.clipboard.writeText(m.content));
+  btn('↗', '分享', () => {
+    if (navigator.share) navigator.share({ text: m.content }).catch(() => {});
+    else navigator.clipboard.writeText(m.content);
+  });
+  btn('🔊', '朗读', () => {
+    speechSynthesis.cancel();
+    speechSynthesis.speak(new SpeechSynthesisUtterance(m.content));
+  });
+  btn('👍', '喜欢', () => { m.fb = m.fb === 'up' ? null : 'up'; persist(); renderAll(); }, m.fb === 'up');
+  btn('👎', '不喜欢', () => { m.fb = m.fb === 'down' ? null : 'down'; persist(); renderAll(); }, m.fb === 'down');
+  if (/```/.test(m.content)) btn('⬇', '下载修改后的文件', () => downloadCode(m));
+  if (isLast) btn('↻', '重新生成', () => regenerate());
+  d.appendChild(acts);
+  const note = document.createElement('div');
+  note.className = 'note';
+  note.textContent = 'Claude 是 AI，可能会出错。';
+  d.appendChild(note);
+  return d;
+}
+
+function renderAll() {
+  const c = cur();
+  $('log').innerHTML = '';
+  c.messages.forEach((m, i) => {
+    $('log').appendChild(m.role === 'user' ? userEl(m.shown || m.content) : botEl(m, i === c.messages.length - 1));
+  });
+  $('empty').classList.toggle('show', c.messages.length === 0);
+  scrollDown();
+}
+async function stream(c) {
+  const key = localStorage.getItem('anthropic_key');
+  if (!key) { openSettings(); return; }
+  $('empty').classList.remove('show');
+  busy = true; $('send').disabled = true;
+  const bot = document.createElement('div');
+  bot.className = 'bot';
+  const think = thinkEl('', true);
+  const textEl = document.createElement('div');
+  bot.append(think.el, textEl);
+  $('log').appendChild(bot);
+  const blocks = [];
+  let thinking = '';
+  scrollDown();
+  let answer = '';
+  try {
+    const base = localStorage.getItem('api_base') || 'https://api.anthropic.com';
+    const res = await fetch(base + '/v1/messages', {
+      method: 'POST',
+      headers: {
+        'content-type': 'application/json',
+        'x-api-key': key,
+        'anthropic-version': '2023-06-01',
+        'anthropic-dangerous-direct-browser-access': 'true'
+      },
+      body: JSON.stringify({
+        model: $('model').value,
+        max_tokens: 16000,
+        stream: true,
+        ...(localStorage.getItem('show_thinking') !== '0' ? { thinking: { type: 'adaptive', display: 'summarized' } } : {}),
+        messages: c.messages.map(m => ({ role: m.role, content: m.blocks || m.content }))
+      })
+    });
+    if (!res.ok) throw new Error(`HTTP ${res.status}: ${await res.text()}`);
+    const reader = res.body.getReader();
+    const decoder = new TextDecoder();
+    let buf = '';
+    while (true) {
+      const { value, done } = await reader.read();
+      if (done) break;
+      buf += decoder.decode(value, { stream: true });
+      const lines = buf.split('\n');
+      buf = lines.pop();
+      for (const line of lines) {
+        if (!line.startsWith('data: ')) continue;
+        const ev = JSON.parse(line.slice(6));
+        if (ev.type === 'content_block_start') {
+          blocks[ev.index] = { ...ev.content_block };
+        } else if (ev.type === 'content_block_delta') {
+          const b = blocks[ev.index];
+          const dl = ev.delta;
+          if (dl.type === 'text_delta') {
+            b.text = (b.text || '') + dl.text;
+            answer += dl.text;
+            textEl.textContent = answer;
+            think.done();
+          } else if (dl.type === 'thinking_delta') {
+            b.thinking = (b.thinking || '') + dl.thinking;
+            thinking += dl.thinking;
+            think.body.textContent = thinking;
+          } else if (dl.type === 'signature_delta') {
+            b.signature = (b.signature || '') + dl.signature;
+          }
+          scrollDown();
+        }
+      }
+    }
+    const kept = blocks.filter(Boolean);
+    c.messages.push({ role: 'assistant', content: answer, thinking, blocks: kept.length ? kept : undefined, fb: null });
+    persist();
+    renderAll(); renderSide();
+  } catch (e) {
+    if (c.messages.length && c.messages[c.messages.length - 1].role === 'user') {
+      $('input').value = c.messages.pop().content;
+    }
+    persist(); renderAll();
+    const d = document.createElement('div');
+    d.className = 'err';
+    d.textContent = '出错：' + e.message;
+    $('log').appendChild(d);
+  } finally {
+    busy = false; $('send').disabled = false;
+    scrollDown();
+  }
+}
+function regenerate() {
+  if (busy) return;
+  const c = cur();
+  if (!c.messages.length || c.messages[c.messages.length - 1].role !== 'assistant') return;
+  c.messages.pop();
+  persist();
+  renderAll();
+  stream(c);
+}
+
+let pendingFile = null;
+
+function renderChip() {
+  const chip = $('chip');
+  chip.innerHTML = '';
+  if (!pendingFile) { chip.style.display = 'none'; return; }
+  chip.style.display = 'flex';
+  const s = document.createElement('span');
+  s.textContent = '📄 ' + pendingFile.name;
+  const x = document.createElement('button');
+  x.textContent = '×';
+  x.onclick = () => { pendingFile = null; renderChip(); };
+  chip.append(s, x);
+}
+
+$('attach').onclick = () => $('file').click();
+$('file').onchange = async e => {
+  const f = e.target.files[0];
+  e.target.value = '';
+  if (!f) return;
+  if (f.size > 200 * 1024) { alert('文件超过 200KB，暂不支持'); return; }
+  pendingFile = { name: f.name, content: await f.text() };
+  renderChip();
+};
+
+function downloadCode(m) {
+  const blocks = [...m.content.matchAll(/```[^\n]*\n([\s\S]*?)```/g)];
+  if (!blocks.length) return;
+  const code = blocks[blocks.length - 1][1];
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob([code], { type: 'text/plain;charset=utf-8' }));
+  a.download = cur().fileName || 'modified.txt';
+  a.click();
+}
+
+function openSide() { $('side').classList.add('open'); $('mask').classList.add('show'); }
+function closeSide() { $('side').classList.remove('open'); $('mask').classList.remove('show'); }
+
+function openSettings() {
+  $('keyInput').value = localStorage.getItem('anthropic_key') || '';
+  $('baseInput').value = localStorage.getItem('api_base') || '';
+  $('thinkToggle').checked = localStorage.getItem('show_thinking') !== '0';
+  $('defModel').value = localStorage.getItem('default_model') || 'claude-sonnet-5-5';
+  $('dialog').style.display = 'flex';
+  closeSide();
+}
+
+$('menu').onclick = openSide;
+$('mask').onclick = closeSide;
+$('navSettings').onclick = openSettings;
+$('navNew').onclick = () => { if (!busy) { newConv(); closeSide(); } };
+$('newChat').onclick = () => { if (!busy) newConv(); };
+$('keyCancel').onclick = () => { $('dialog').style.display = 'none'; };
+$('keySave').onclick = () => {
+  localStorage.setItem('anthropic_key', $('keyInput').value.trim());
+  localStorage.setItem('api_base', $('baseInput').value.trim().replace(/\/+$/, ''));
+  localStorage.setItem('show_thinking', $('thinkToggle').checked ? '1' : '0');
+  localStorage.setItem('default_model', $('defModel').value);
+  $('model').value = $('defModel').value;
+  $('dialog').style.display = 'none';
+};
+$('clearAll').onclick = () => {
+  if (busy || !confirm('清空所有对话？')) return;
+  convs = [];
+  newConv();
+  renderSide();
+  $('dialog').style.display = 'none';
+};
+$('input').addEventListener('keydown', e => {
+  if (e.key === 'Enter' && !e.shiftKey && !e.isComposing) { e.preventDefault(); $('form').requestSubmit(); }
+});
+$('form').onsubmit = e => {
+  e.preventDefault();
+  const text = $('input').value.trim();
+  if ((!text && !pendingFile) || busy) return;
+  $('input').value = '';
+  const c = cur();
+  let content = text;
+  let shown = text;
+  if (pendingFile) {
+    content = (text || '请修改这个文件') + `\n\n文件名：${pendingFile.name}\n\`\`\`\n${pendingFile.content}\n\`\`\`\n请返回修改后的完整文件内容，放在一个代码块里。`;
+    shown = (text || '请修改这个文件') + `\n📄 ${pendingFile.name}`;
+    c.fileName = pendingFile.name;
+    pendingFile = null;
+    renderChip();
+  }
+  c.messages.push({ role: 'user', content, shown });
+  persist(); renderAll(); renderSide();
+  stream(c);
+};
+
+$('model').value = localStorage.getItem('default_model') || 'claude-sonnet-5-5';
+$('model').onchange = () => localStorage.setItem('default_model', $('model').value);
+if (!convs.length) newConv(); else { renderAll(); renderSide(); }
+if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js');
+</script>
+</body>
+</html>
