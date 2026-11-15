@@ -20,7 +20,7 @@ header { display:flex; align-items:center; justify-content:space-between; height
 #empty { flex:1; display:none; flex-direction:column; align-items:center; justify-content:center; gap:18px; }
 #empty.show { display:flex; }
 #empty h2 { font-weight:400; font-size:26px; margin:0; }
-.user { align-self:flex-end; max-width:80%; background:var(--user); padding:12px 16px; border-radius:18px; line-height:1.6; white-space:pre-wrap; word-break:break-word; }
+.user { align-self:flex-end; max-width:80%; background:#EAE8E3; padding:12px 18px; border-radius:22px; font-size:16px; line-height:1.6; white-space:pre-wrap; word-break:break-word; }
 .bot { font-family:-apple-system,"PingFang SC","Microsoft YaHei",sans-serif; font-size:16px; line-height:1.75; white-space:pre-wrap; word-break:break-word; }
 .acts { display:flex; gap:4px; margin-top:10px; font-family:-apple-system,"PingFang SC",sans-serif; }
 .acts button { background:none; border:none; color:var(--muted); width:32px; height:30px; border-radius:8px; font-size:15px; padding:0; }
@@ -62,9 +62,18 @@ footer { padding:8px 12px calc(12px + env(safe-area-inset-bottom)); flex-shrink:
 .conv .t { flex:1; text-align:left; background:none; border:none; padding:10px; font-size:15px; color:var(--text); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
 .conv .x { background:none; border:none; color:var(--muted); padding:6px 10px; font-size:16px; }
 .side-foot { border-top:1px solid var(--line); padding-top:10px; display:flex; align-items:center; gap:10px; }
-.side-foot .nav { background:none; border:none; padding:10px; border-radius:10px; font-size:15px; flex:1; text-align:left; color:var(--text); }
+.nav { display:block; width:100%; background:none; border:none; padding:10px 12px; border-radius:10px; font-size:15px; text-align:left; color:var(--text); }
+.nav:active { background:#E9E7E0; }
+.side-foot .nav { width:auto; flex:1; }
+.set-page { position:fixed; inset:0; background:var(--bg); z-index:35; display:none; flex-direction:column; overflow-y:auto; }
+.set-page.show { display:flex; }
+.set-head { display:flex; align-items:center; height:56px; padding:0 12px; font-size:17px; font-weight:600; flex-shrink:0; }
+.set-head button { background:none; border:none; font-size:24px; color:var(--text); width:40px; height:40px; }
+.set-row { display:flex; align-items:center; justify-content:space-between; width:100%; padding:15px 18px; background:none; border:none; border-bottom:1px solid var(--line); font-size:16px; color:var(--text); text-align:left; }
+.set-row .v { color:var(--muted); font-size:14px; }
+.set-row.danger { color:#B04A3A; justify-content:center; }
 .avatar { width:34px; height:34px; border-radius:50%; background:var(--accent); color:#fff; display:flex; align-items:center; justify-content:center; font-size:14px; }
-#dialog { position:fixed; inset:0; background:rgba(0,0,0,.35); display:none; align-items:center; justify-content:center; padding:20px; z-index:30; }
+#dialog { position:fixed; inset:0; background:rgba(0,0,0,.35); display:none; align-items:center; justify-content:center; padding:20px; z-index:40; }
 #dialog .box { background:var(--card); border-radius:16px; padding:20px; width:100%; max-width:360px; }
 #dialog input, #dialog select { width:100%; padding:10px; border:1px solid var(--line); border-radius:8px; margin:8px 0; background:#fff; }
 #dialog label { font-size:13px; color:var(--muted); }
@@ -76,7 +85,6 @@ footer { padding:8px 12px calc(12px + env(safe-area-inset-bottom)); flex-shrink:
 <div id="mask"></div>
 <aside id="side">
   <div class="side-top">
-    <div style="width:30px;height:30px;overflow:hidden;position:relative"><img src="logo.png" alt="" style="position:absolute;width:403px;left:-78px;top:-85px"></div>
     <span class="serif" style="font-size:24px">Claude</span>
   </div>
   <button class="newbtn" id="navNew">＋ 新建对话</button>
@@ -120,16 +128,38 @@ footer { padding:8px 12px calc(12px + env(safe-area-inset-bottom)); flex-shrink:
     </div>
   </form>
 </footer>
-<div id="login" style="display:none;position:fixed;inset:0;background:var(--bg);z-index:50;flex-direction:column;align-items:center;padding:24px 28px;overflow-y:auto">
-  <div style="display:flex;align-items:center;gap:8px;margin-top:20px"><img src="burst.png" alt="" style="width:26px;height:26px"><span class="serif" style="font-size:24px">Claude</span></div>
-  <div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;width:100%;gap:18px">
-    <img src="burst.png" alt="" style="width:120px;height:120px">
-    <div class="serif" style="font-size:22px">为解决问题的人打造的 AI</div>
-    <input id="loginBase" type="text" placeholder="API 地址（官方留空）" style="width:100%;max-width:360px;padding:14px;border:1px solid var(--line);border-radius:12px;background:var(--card);font-size:15px;margin-top:12px">
-    <input id="loginKey" type="password" placeholder="输入你的 API Key" style="width:100%;max-width:360px;padding:14px;border:1px solid var(--line);border-radius:12px;background:var(--card);font-size:15px">
-    <button id="loginBtn" style="width:100%;max-width:360px;padding:14px;border:none;border-radius:999px;background:#111;color:#fff;font-size:16px">继续</button>
+<div id="login" style="display:none;position:fixed;inset:0;background:var(--bg);z-index:50;flex-direction:column;align-items:center;padding:28px 24px;overflow-y:auto">
+  <img src="login-mark.png" alt="" style="height:28px;margin-top:4px">
+  <div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;width:100%;gap:24px">
+    <img src="login-art.png" alt="" style="width:181px;height:189px">
+    <div class="serif" style="font-size:26px">为解决问题的人打造的 AI</div>
+    <input id="loginKey" type="password" placeholder="输入 API Key" style="width:100%;max-width:414px;height:55px;padding:0 18px;border:1px solid var(--line);border-radius:14px;background:#fff;font-size:16px;outline:none">
+    <button id="loginBtn" style="width:100%;max-width:414px;height:50px;border:none;border-radius:999px;background:#111;color:#fff;font-size:16px">继续</button>
+    <div style="width:100%;max-width:414px;display:flex;align-items:center;gap:12px;color:var(--muted);font-size:14px"><span style="flex:1;height:1px;background:var(--line)"></span>或<span style="flex:1;height:1px;background:var(--line)"></span></div>
+    <input id="loginBase" type="text" placeholder="输入 API 地址（官方可留空）" style="width:100%;max-width:414px;height:55px;padding:0 18px;border:1px solid var(--line);border-radius:14px;background:#fff;font-size:16px;outline:none">
   </div>
-  <div style="font-size:12px;color:var(--muted);text-align:center;padding:16px 0;line-height:1.6">Key 只保存在本机，不会上传到其他地方。</div>
+  <div style="font-size:12px;color:var(--muted);text-align:center;padding:16px 0 8px;line-height:1.7;max-width:414px">Key 只保存在本机，不会上传到其他地方。<br>地址和 Key 请使用你自己的账号。</div>
+</div>
+<div id="settings" class="set-page">
+  <div class="set-head"><button data-back="settings">‹</button><span style="margin-left:6px">设置</span></div>
+  <button class="set-row" data-go="feat">功能<span class="v">›</span></button>
+  <button class="set-row" data-soon="连接器">连接器<span class="v">›</span></button>
+  <button class="set-row" data-go="perm">权限<span class="v">›</span></button>
+  <button class="set-row" data-soon="颜色模式">颜色模式<span class="v">›</span></button>
+  <button class="set-row" data-soon="字体样式">字体样式<span class="v">›</span></button>
+  <button class="set-row" data-soon="语音">语音<span class="v">›</span></button>
+  <button class="set-row" data-soon="触感反馈">触感反馈<span class="v">›</span></button>
+  <button class="set-row" data-soon="通知">通知<span class="v">›</span></button>
+  <button class="set-row" data-soon="时间与专注">时间与专注<span class="v">›</span></button>
+  <button class="set-row" data-soon="隐私">隐私<span class="v">›</span></button>
+  <button class="set-row" data-soon="共享">共享<span class="v">›</span></button>
+  <button class="set-row danger" id="setLogout">退出登录</button>
+</div>
+<div id="perm" class="set-page">
+  <div class="set-head"><button data-back="perm">‹</button><span style="margin-left:6px">权限</span></div>
+  <button class="set-row" id="pFolder">文件夹访问<span class="v" id="pFolderV">—</span></button>
+  <button class="set-row" id="pShizuku">Shizuku 状态<span class="v" id="pShizukuV">—</span></button>
+  <button class="set-row" id="pShizukuReq">请求 Shizuku 授权<span class="v">›</span></button>
 </div>
 <div id="dialog">
   <div class="box">
@@ -501,7 +531,27 @@ function openSettings() {
 
 $('menu').onclick = openSide;
 $('mask').onclick = closeSide;
-$('navSettings').onclick = openSettings;
+function setPage(id, show) { $(id).classList.toggle('show', show); }
+function refreshPerm() {
+  if (!window.AndroidFS) {
+    $('pFolderV').textContent = '仅 APK 版可用';
+    $('pShizukuV').textContent = '仅 APK 版可用';
+    return;
+  }
+  $('pFolderV').textContent = AndroidFS.hasFolder() ? '已选择' : '未选择';
+  const s = JSON.parse(AndroidFS.shizukuStatus());
+  $('pShizukuV').textContent = !s.running ? '未运行' : (s.granted ? '已授权' : '未授权');
+}
+window.onShizukuResult = () => refreshPerm();
+$('pFolder').onclick = () => { if (window.AndroidFS) AndroidFS.pickFolder(); };
+$('pShizukuReq').onclick = () => { if (window.AndroidFS) AndroidFS.requestShizuku(); };
+$('navSettings').onclick = () => { closeSide(); setPage('settings', true); };
+document.querySelectorAll('[data-go]').forEach(b => b.onclick = () => {
+  if (b.dataset.go === 'feat') openSettings();
+  else { refreshPerm(); setPage(b.dataset.go, true); }
+});
+document.querySelectorAll('[data-back]').forEach(b => b.onclick = () => setPage(b.dataset.back, false));
+$('setLogout').onclick = () => { setPage('settings', false); $('logout').click(); };
 $('navNew').onclick = () => { if (!busy) { newConv(); closeSide(); } };
 document.querySelectorAll('[data-soon]').forEach(b => b.onclick = () => alert(b.dataset.soon + ' 暂未开放'));
 $('newChat').onclick = () => { if (!busy) newConv(); };
